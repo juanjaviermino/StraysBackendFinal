@@ -6,6 +6,7 @@ from models.raza import Raza
 from models.especie import Especie
 from models.usuario import Usuario
 from utils.database import db
+from sqlalchemy import func
 import os
 import datetime
 import uuid  # Import UUID library
@@ -250,3 +251,43 @@ def get_publicacion_by_id(publicacion_id):
     }
 
     return jsonify(publicacion_data)
+
+@publicacion_blueprint.route('/publicaciones/count_by_raza', methods=['GET'])
+def count_publicaciones_by_raza():
+    especie_id = request.args.get('especieId', type=int)
+    raza_id = request.args.get('razaId', type=int)
+    usuario_id = request.args.get('usuarioId', type=int)
+    ciudad_id = request.args.get('ciudadId', type=int)
+    tipo = request.args.get('tipo')
+    fecha_start = request.args.get('fechaStart')
+    fecha_end = request.args.get('fechaEnd')
+    publicacion_id = request.args.get('publicacionId', type=int)
+
+    query = db.session.query(Raza.raza, func.count(Publicacion.publicacionId).label('count')).outerjoin(Publicacion, Raza.id == Publicacion.razaId)
+
+    if especie_id:
+        query = query.filter(Publicacion.especieId == especie_id)
+    if raza_id:
+        query = query.filter(Publicacion.razaId == raza_id)
+    if usuario_id:
+        query = query.filter(Publicacion.usuarioId == usuario_id)
+    if ciudad_id:
+        query = query.join(Usuario, Publicacion.usuarioId == Usuario.id).filter(Usuario.ciudadId == ciudad_id)
+    if publicacion_id:
+        query = query.filter(Publicacion.publicacionId == publicacion_id)
+    if tipo:
+        query = query.filter(Publicacion.tipo == tipo)
+    if fecha_start:
+        query = query.filter(Publicacion.fecha >= datetime.datetime.strptime(fecha_start, '%Y-%m-%d').date())
+    if fecha_end:
+        query = query.filter(Publicacion.fecha <= datetime.datetime.strptime(fecha_end, '%Y-%m-%d').date())
+
+    query = query.group_by(Raza.raza).order_by(func.count(Publicacion.publicacionId).desc())
+
+    query = query.limit(15)
+
+    results = query.all()
+
+    raza_count_data = [{'raza': raza, 'count': count} for raza, count in results]
+
+    return jsonify(raza_count_data)
