@@ -54,7 +54,9 @@ app.register_blueprint(color_publicacion_blueprint)
 from controllers.signimages_controller import sign_images_blueprint
 app.register_blueprint(sign_images_blueprint)
 
-sign_images_blueprint
+# Import the notificaciones blueprint
+from controllers.notificacion_controller import notificacion_blueprint
+app.register_blueprint(notificacion_blueprint)
 
 if __name__ == "__main__":
     app.run(debug=True)
